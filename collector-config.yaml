@@ -1,0 +1,37 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+exporters:
+  otlphttp/observe:
+    endpoint: "${env:OBSERVE_ENDPOINT}"
+    headers:
+      # Basic auth dirakit dari env var terpisah — tanpa credential hardcode
+      Authorization: "Basic ${env:OBSERVE_AUTH}"
+      X-Scope-OrgId: "${env:OBSERVE_ORG_ID}"
+
+processors:
+  batch:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/observe]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/observe]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/observe]

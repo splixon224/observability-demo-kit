@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observability Demo Kit — OpenTelemetry + OpenObserve</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 {
+            color: #58a6ff;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        .tagline { color: #8b949e; margin-bottom: 2rem; }
+        pre {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            color: #7ee787;
+            margin-bottom: 2rem;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1.25rem;
+        }
+        .card h3 { color: #58a6ff; margin-bottom: 0.5rem; font-size: 1rem; }
+        .card .count { font-size: 2rem; font-weight: bold; color: #7ee787; }
+        .card .sub { color: #8b949e; font-size: 0.85rem; }
+        .card.loading .count { color: #d29922; }
+        footer {
+            color: #8b949e;
+            font-size: 0.85rem;
+            text-align: center;
+            padding-top: 1rem;
+            border-top: 1px solid #21262d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Observability Demo Kit</h1>
+        <p class="tagline">OpenTelemetry + OpenObserve — minimal deployable stack untuk logs, metrics, dan traces.</p>
+
+        <pre>
+┌──────────────┐     OTLP/gRPC      ┌────────────────────┐
+│ Demo App     │ ──────────────────▶│ OTel Collector     │
+│ (Flask:5081) │                    │ (otelcol:4317)     │
+└──────────────┘                    └──────────┬─────────┘
+                                               │ OTLP/HTTP
+                                               ▼
+                                      ┌────────────────────┐
+                                      │  OpenObserve       │
+                                      │  (observe:5080)    │
+                                      │  - Logs Explorer   │
+                                      │  - Metrics Panel   │
+                                      │  - Trace View      │
+                                      └────────────────────┘
+        </pre>
+
+        <div class="status-grid">
+            <div class="card loading" id="card-logs">
+                <h3>📝 Logs</h3>
+                <div class="count" id="logs-count">—</div>
+                <div class="sub">Fetching from <span id="endpoint-logs"></span></div>
+            </div>
+            <div class="card loading" id="card-metrics">
+                <h3>📊 Metrics</h3>
+                <div class="count" id="metrics-count">—</div>
+                <div class="sub">Fetching from <span id="endpoint-metrics"></span></div>
+            </div>
+            <div class="card loading" id="card-traces">
+                <h3>🔗 Traces</h3>
+                <div class="count" id="traces-count">—</div>
+                <div class="sub">Fetching from <span id="endpoint-traces"></span></div>
+            </div>
+        </div>
+
+        <footer>built by AI employees org</footer>
+    </div>
+
+    <script>
+        const OBSERVE_ENDPOINT = window.__OBSERVE_ENDPOINT__ || 'http://localhost:5080';
+        document.getElementById('endpoint-logs').textContent = OBSERVE_ENDPOINT;
+        document.getElementById('endpoint-metrics').textContent = OBSERVE_ENDPOINT;
+        document.getElementById('endpoint-traces').textContent = OBSERVE_ENDPOINT;
+
+        async function fetchCount(path, id) {
+            try {
+                const res = await fetch(OBSERVE_ENDPOINT + path, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!res.ok) throw new Error(res.status);
+                const data = await res.json();
+                document.getElementById(id).textContent = data.total ?? data.count ?? '?';
+                document.getElementById('card-' + id.replace('-count','')).classList.remove('loading');
+            } catch(e) {
+                document.getElementById(id).textContent = 'ERR';
+            }
+        }
+
+        fetchCount('/api/default/logs/_search?query=*', 'logs-count');
+        fetchCount('/api/default/metrics/query?query=demo_http_requests_total', 'metrics-count');
+        fetchCount('/api/default/traces?limit=1', 'traces-count');
+    </script>
+</body>
+</html>
