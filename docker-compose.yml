@@ -1,0 +1,76 @@
+# observability-demo-kit — Docker Compose
+# Service: app (Flask:5081), collector (OTel:4317/4318), observe (OpenObserve:5080)
+# Secret & credential: env_file .env (lihat .env.example — JANGAN commit .env)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: obs-demo-app
+    ports:
+      - "5081:5081"
+    environment:
+      - SERVICE_NAME=observability-demo
+      - OBSERVE_ENDPOINT=http://collector:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4317
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=app.app:application
+    env_file:
+      - .env
+    depends_on:
+      - collector
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5081/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: obs-demo-collector
+    ports:
+      - "4317:4317"   # OTLP/gRPC
+      - "4318:4318"   # OTLP/HTTP
+    volumes:
+      - ./collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    environment:
+      - OBSERVE_ENDPOINT=http://observe:5080/api/default/
+      - OBSERVE_AUTH=${OBSERVE_AUTH}
+      - OBSERVE_ORG_ID=default
+    depends_on:
+      - observe
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "validate", "--config", "/etc/otelcol/config.yaml"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  observe:
+    image: openobserve/openobserve:latest
+    container_name: obs-demo-observe
+    ports:
+      - "5080:5080"
+    environment:
+      - ZO_ROOT_USER_EMAIL=${ZO_ROOT_USER_EMAIL}
+      - ZO_ROOT_USER_PASSWORD=${ZO_ROOT_USER_PASSWORD}
+      - ZO_DATA_DIR=/data
+      - ZO_HTTP_PORT=5080
+    volumes:
+      - observe-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/openobserve", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  observe-data:
+    driver: local

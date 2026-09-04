@@ -20,4 +20,4 @@ ENV OBSERVE_ENDPOINT=http://collector:4318
 
 EXPOSE 5081
 
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=5081"]
+CMD ["python", "-c", "from app.app import application; application.run(host='0.0.0.0', port=5081)"]
