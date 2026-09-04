@@ -1,0 +1,10 @@
+# observability-demo-kit — stack: Flask + OpenTelemetry (OTLP) + Prometheus client
+# Versi dibuat longgar (>=) supaya dev bebas resolve; pin final nanti di lockfile.
+flask>=2.3
+opentelemetry-api>=1.24
+opentelemetry-sdk>=1.24
+opentelemetry-exporter-otlp>=1.24
+opentelemetry-instrumentation-flask>=0.45b0
+prometheus-client>=0.19
+pytest>=7.4
+requests>=2.31
